@@ -1,0 +1,70 @@
+import UserData from "../models/userDataSchema.js";
+
+
+//Get all Users
+export const getUserData = async (req, res) => {
+        try{
+            const data = await UserData.find();
+            res.status(200).json(data);
+        }
+        catch(err){
+            res.status(500).json({message : err.message});
+        }
+};
+
+
+//Last updated details
+export const getLastUpdates = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const user = await UserData.findById(id).select("lastUpdated");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json(user.lastUpdated);
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+//Update Activity
+export const updateUserData = async (req, res) => {
+  try {
+    const { status, comment } = req.body;
+
+    const user = await UserData.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update activity
+    user.activity.status =
+      status === "talk"
+        ? "Talk"
+        : status === "notTalk"
+        ? "Not Talk"
+        : "Delete Profile";
+
+    user.activity.comment = comment;
+
+    // Push into lastUpdated history
+    user.lastUpdated.push({
+      comment,
+      updatedAt: new Date(),
+    });
+
+    await user.save();
+
+    res.status(200).json({
+      message: "User data updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
